@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const db = require('../firebase');
+const db = require('../../firebase');
 
 // Collection trong Firestore
 const collectionRef = db.collection('movies_games');
