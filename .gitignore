@@ -20,3 +20,4 @@ Thumbs.db
 # Build files (if any)
 dist/
 build/
+firebase-key.json

@@ -10,7 +10,7 @@ app.use(cors());
 app.use(express.json());
 
 app.get('/', (req, res) => {
-  res.send('Welcome to Movie/Game API 🎬🎮');
+  res.send('🎬🎮 Welcome to Movie/Game API with Firebase');
 });
 
 app.use('/api/items', itemsRouter);
