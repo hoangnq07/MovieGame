@@ -18,22 +18,23 @@ const Quotes = () => {
       return '⚠️ Không thể dịch câu này';
     }
   };
-
+  const API_URL = import.meta.env.VITE_API_URL;
+  
   // 🎯 Hàm fetch quote từ ZenQuotes và dịch
   const fetchQuote = async () => {
+    
     setLoading(true);
     setError('');
     try {
-      const res = await fetch('https://cors-anywhere.herokuapp.com/https://zenquotes.io/api/random');
-      if (!res.ok) throw new Error('Không lấy được trích dẫn');
+      const res = await fetch(`${API_URL}/api/random-quote`);
       const data = await res.json();
+      
       const quoteText = data[0].q;
       const quoteAuthor = data[0].a;
-
+      
       setQuote(quoteText);
       setAuthor(quoteAuthor);
-
-      // 🌐 Dịch câu trích dẫn sang tiếng Việt
+      
       const translated = await translateText(quoteText);
       setTranslatedQuote(translated);
     } catch (err) {

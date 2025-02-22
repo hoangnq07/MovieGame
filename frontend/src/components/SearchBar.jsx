@@ -25,10 +25,6 @@ const SearchBar = ({ onSearch, onGetLocation, toggleDarkMode, darkMode }) => {
         📍 Lấy Vị Trí Hiện Tại
       </button>
 
-      {/* 🌗 Dark/Light Mode */}
-      <button className="toggle-mode" onClick={toggleDarkMode}>
-        {darkMode ? '🌞 Chế độ Sáng' : '🌙 Chế độ Tối'}
-      </button>
     </div>
   );
 };
