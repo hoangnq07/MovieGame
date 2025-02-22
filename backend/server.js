@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import quotesRoute from './routes/quotes.js'; // ✅ Import route thay vì React component
+import quotesRoute from './routes/quotes.js';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -11,17 +11,17 @@ const PORT = process.env.PORT || 5000;
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ✅ Middleware
+// ✅ Bật CORS
 app.use(cors());
 app.use(express.json());
 
-// ✅ Sử dụng route API
+// ✅ Route API
 app.use("/api/quotes", quotesRoute);
 
-// ✅ Serve frontend (React/Vite build)
+// ✅ Serve Frontend build nếu cần
 app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
-// ✅ Route catch-all để SPA hoạt động
+// ✅ SPA Route
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, '../frontend/dist/index.html'));
 });
