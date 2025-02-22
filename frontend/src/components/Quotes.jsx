@@ -26,7 +26,7 @@ const Quotes = () => {
     setLoading(true);
     setError('');
     try {
-      const res = await fetch(`${API_URL}/api/quotes/random-quote`);
+      const res = await fetch(`https://hoangblog.id.vn/api/quotes/random-quote`);
       const data = await res.json();
       
       const quoteText = data[0].q;
