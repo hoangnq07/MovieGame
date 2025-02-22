@@ -1,12 +1,12 @@
-const express = require('express');
+import express from 'express';
+import db from '../firebase';
 const router = express.Router();
-const db = require('../firebase');
 
 // Collection trong Firestore
 const collectionRef = db.collection('movies_games');
 
 // GET tất cả items
-router.get('/', async (req, res) => {
+router.get('/', async (_, res) => {
   try {
     const snapshot = await collectionRef.get();
     const items = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

@@ -26,5 +26,6 @@
   "devDependencies": {
     "nodemon": "^3.1.9",
     "tailwindcss": "^4.0.7"
-  }
+  },
+  "type": "module"
 }

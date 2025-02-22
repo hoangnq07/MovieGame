@@ -1,5 +1,5 @@
-const express = require('express');
-const axios = require('axios');
+import express from 'express';
+import axios from 'axios';
 
 const router = express.Router();
 
@@ -13,4 +13,4 @@ router.get('/random-quote', async (req, res) => {
   }
 });
 
-module.exports = router; // ✅ Sử dụng module.exports thay vì export default
+export default router; // ✅ Đổi sang export default
