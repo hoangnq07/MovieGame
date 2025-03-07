@@ -27,62 +27,118 @@ ChartJS.register(
 );
 
 const Stats = () => {
-  // State cho Movie
+  // State hiện tại
   const [movieFavorites, setMovieFavorites] = useState([]);
   const [movieRatings, setMovieRatings] = useState({});
-  
-  // State cho Anime
   const [animeFavorites, setAnimeFavorites] = useState([]);
   const [animeRatings, setAnimeRatings] = useState({});
+  
+  // Thêm state mới
+  const [mangaFavorites, setMangaFavorites] = useState([]);
+  const [mangaRatings, setMangaRatings] = useState({});
+  const [gameFavorites, setGameFavorites] = useState([]);
+  const [gameRatings, setGameRatings] = useState({});
+  const [bookFavorites, setBookFavorites] = useState([]);
+  const [bookRatings, setBookRatings] = useState({});
+
+  // Helper function để tính rating trung bình
+  const calculateAverageRating = (ratings) => {
+    return Object.values(ratings).length > 0
+      ? (Object.values(ratings).reduce((a, b) => a + b, 0) / Object.values(ratings).length).toFixed(1)
+      : 0;
+  };
 
   useEffect(() => {
-    // Load Movie data
+    // Load data hiện tại
     const savedMovieFavorites = localStorage.getItem("favoriteMovies");
     const savedMovieRatings = localStorage.getItem("movieRatings");
-    
-    setMovieFavorites(savedMovieFavorites ? JSON.parse(savedMovieFavorites) : []);
-    setMovieRatings(savedMovieRatings ? JSON.parse(savedMovieRatings) : {});
-
-    // Load Anime data
     const savedAnimeFavorites = localStorage.getItem("favoriteAnime");
     const savedAnimeRatings = localStorage.getItem("animeRatings");
     
+    // Load data mới
+    const savedMangaFavorites = localStorage.getItem("favoriteManga");
+    const savedMangaRatings = localStorage.getItem("mangaRatings");
+    const savedGameFavorites = localStorage.getItem("favoriteGames");
+    const savedGameRatings = localStorage.getItem("gameRatings");
+    const savedBookFavorites = localStorage.getItem("favoriteBooks");
+    const savedBookRatings = localStorage.getItem("bookRatings");
+    
+    // Set state hiện tại
+    setMovieFavorites(savedMovieFavorites ? JSON.parse(savedMovieFavorites) : []);
+    setMovieRatings(savedMovieRatings ? JSON.parse(savedMovieRatings) : {});
     setAnimeFavorites(savedAnimeFavorites ? JSON.parse(savedAnimeFavorites) : []);
     setAnimeRatings(savedAnimeRatings ? JSON.parse(savedAnimeRatings) : {});
+    
+    // Set state mới
+    setMangaFavorites(savedMangaFavorites ? JSON.parse(savedMangaFavorites) : []);
+    setMangaRatings(savedMangaRatings ? JSON.parse(savedMangaRatings) : {});
+    setGameFavorites(savedGameFavorites ? JSON.parse(savedGameFavorites) : []);
+    setGameRatings(savedGameRatings ? JSON.parse(savedGameRatings) : {});
+    setBookFavorites(savedBookFavorites ? JSON.parse(savedBookFavorites) : []);
+    setBookRatings(savedBookRatings ? JSON.parse(savedBookRatings) : {});
   }, []);
 
-  // Tính toán thống kê tổng quan
+  // Cập nhật stats tổng quan
   const stats = {
-    totalItems: movieFavorites.length + animeFavorites.length,
+    // Stats hiện tại
+    totalItems: movieFavorites.length + animeFavorites.length + mangaFavorites.length + 
+                gameFavorites.length + bookFavorites.length,
     totalMovies: movieFavorites.length,
     totalAnime: animeFavorites.length,
+    totalManga: mangaFavorites.length,
+    totalGames: gameFavorites.length,
+    totalBooks: bookFavorites.length,
+    
     ratedMovies: Object.keys(movieRatings).length,
     ratedAnime: Object.keys(animeRatings).length,
-    averageMovieRating: Object.values(movieRatings).length > 0
-      ? (Object.values(movieRatings).reduce((a, b) => a + b, 0) / Object.values(movieRatings).length).toFixed(1)
-      : 0,
-    averageAnimeRating: Object.values(animeRatings).length > 0
-      ? (Object.values(animeRatings).reduce((a, b) => a + b, 0) / Object.values(animeRatings).length).toFixed(1)
-      : 0
+    ratedManga: Object.keys(mangaRatings).length,
+    ratedGames: Object.keys(gameRatings).length,
+    ratedBooks: Object.keys(bookRatings).length,
+    
+    averageMovieRating: calculateAverageRating(movieRatings),
+    averageAnimeRating: calculateAverageRating(animeRatings),
+    averageMangaRating: calculateAverageRating(mangaRatings),
+    averageGameRating: calculateAverageRating(gameRatings),
+    averageBookRating: calculateAverageRating(bookRatings)
   };
 
-  // Thống kê theo năm
+  // Cập nhật thống kê theo năm
   const getYearStats = () => {
     const yearStats = {};
     
-    movieFavorites.forEach(movie => {
-      const year = new Date(movie.release_date).getFullYear();
-      yearStats[year] = yearStats[year] || { movies: 0, anime: 0 };
-      yearStats[year].movies++;
-    });
+    const addToYearStats = (items, type, dateField) => {
+      items.forEach(item => {
+        let year;
+        if (type === 'anime') {
+          year = item.aired?.prop?.from?.year;
+        } else if (type === 'manga') {
+          year = item.published?.prop?.from?.year;
+        } else if (type === 'book') {
+          year = item.publishedDate ? new Date(item.publishedDate).getFullYear() : null;
+        } else if (type === 'game') {
+          year = item.releaseDate ? new Date(item.releaseDate).getFullYear() : null;
+        } else {
+          year = item[dateField] ? new Date(item[dateField]).getFullYear() : null;
+        }
 
-    animeFavorites.forEach(anime => {
-      const year = anime.aired?.prop?.from?.year;
-      if (year) {
-        yearStats[year] = yearStats[year] || { movies: 0, anime: 0 };
-        yearStats[year].anime++;
-      }
-    });
+        if (year) {
+          yearStats[year] = yearStats[year] || { 
+            movies: 0, 
+            anime: 0, 
+            manga: 0, 
+            games: 0, 
+            books: 0 
+          };
+          yearStats[year][type + 's']++;
+        }
+      });
+    };
+
+    addToYearStats(movieFavorites, 'movie', 'release_date');
+    addToYearStats(animeFavorites, 'anime');
+    addToYearStats(mangaFavorites, 'manga');
+    addToYearStats(gameFavorites, 'game');
+    addToYearStats(bookFavorites, 'book');
 
     return yearStats;
   };
@@ -149,6 +205,27 @@ const Stats = () => {
         borderColor: "rgb(255, 99, 132)",
         backgroundColor: "rgba(255, 99, 132, 0.5)",
         tension: 0.3
+      },
+      {
+        label: "Manga",
+        data: Object.keys(getYearStats()).sort().map(year => getYearStats()[year].manga),
+        borderColor: "rgb(54, 162, 235)",
+        backgroundColor: "rgba(54, 162, 235, 0.5)",
+        tension: 0.3
+      },
+      {
+        label: "Game",
+        data: Object.keys(getYearStats()).sort().map(year => getYearStats()[year].games),
+        borderColor: "rgb(153, 102, 255)",
+        backgroundColor: "rgba(153, 102, 255, 0.5)",
+        tension: 0.3
+      },
+      {
+        label: "Sách",
+        data: Object.keys(getYearStats()).sort().map(year => getYearStats()[year].books),
+        borderColor: "rgb(255, 159, 64)",
+        backgroundColor: "rgba(255, 159, 64, 0.5)",
+        tension: 0.3
       }
     ]
   };
@@ -201,14 +278,20 @@ const Stats = () => {
           <div className="stat-details">
             <span>🎬 Phim: {stats.totalMovies}</span>
             <span>📺 Anime: {stats.totalAnime}</span>
+            <span>📖 Manga: {stats.totalManga}</span>
+            <span>🎮 Game: {stats.totalGames}</span>
+            <span>📚 Sách: {stats.totalBooks}</span>
           </div>
         </div>
         <div className="stat-card">
           <h3>Đã đánh giá</h3>
-          <p>{stats.ratedMovies + stats.ratedAnime}</p>
+          <p>{stats.ratedMovies + stats.ratedAnime + stats.ratedManga + stats.ratedGames + stats.ratedBooks}</p>
           <div className="stat-details">
             <span>🎬 Phim: {stats.ratedMovies}</span>
             <span>📺 Anime: {stats.ratedAnime}</span>
+            <span>📖 Manga: {stats.ratedManga}</span>
+            <span>🎮 Game: {stats.ratedGames}</span>
+            <span>📚 Sách: {stats.ratedBooks}</span>
           </div>
         </div>
         <div className="stat-card">
@@ -216,66 +299,60 @@ const Stats = () => {
           <div className="stat-details">
             <span>🎬 Phim: ⭐ {stats.averageMovieRating}/5</span>
             <span>📺 Anime: ⭐ {stats.averageAnimeRating}/5</span>
+            <span>📖 Manga: ⭐ {stats.averageMangaRating}/5</span>
+            <span>🎮 Game: ⭐ {stats.averageGameRating}/5</span>
+            <span>📚 Sách: ⭐ {stats.averageBookRating}/5</span>
           </div>
         </div>
       </div>
 
-      {stats.totalItems > 0 ? (
+      {stats.totalItems > 0 && (
         <div className="charts-grid">
-          {/* Line Chart */}
           <div className="chart-box line-chart">
             <h3>Phân Bố Theo Năm</h3>
             <div style={{ height: '300px', width: '100%' }}>
-              <Line 
-                data={yearData}
-                options={{
-                  ...commonChartOptions,
-                  scales: {
-                    y: {
-                      beginAtZero: true,
-                      ticks: {
-                        stepSize: 1,
-                        font: { size: 10 }
-                      }
-                    },
-                    x: {
-                      ticks: {
-                        font: { size: 10 }
-                      }
-                    }
-                  }
-                }}
-              />
+              <Line data={yearData} options={lineChartOptions} />
             </div>
           </div>
 
-          {/* Pie Charts */}
           <div className="chart-box pie-charts">
             <h3>Phân Bố Rating</h3>
             <div className="pie-charts-container">
+              {/* Existing pie charts */}
               <div className="pie-chart-wrapper">
                 <h4>Phim</h4>
                 <div style={{ height: '200px', width: '100%' }}>
-                  <Pie 
-                    data={getRatingData(movieRatings)}
-                    options={commonChartOptions}
-                  />
+                  <Pie data={getRatingData(movieRatings)} options={commonChartOptions} />
                 </div>
               </div>
               <div className="pie-chart-wrapper">
                 <h4>Anime</h4>
                 <div style={{ height: '200px', width: '100%' }}>
-                  <Pie 
-                    data={getRatingData(animeRatings)}
-                    options={commonChartOptions}
-                  />
+                  <Pie data={getRatingData(animeRatings)} options={commonChartOptions} />
+                </div>
+              </div>
+              {/* New pie charts */}
+              <div className="pie-chart-wrapper">
+                <h4>Manga</h4>
+                <div style={{ height: '200px', width: '100%' }}>
+                  <Pie data={getRatingData(mangaRatings)} options={commonChartOptions} />
+                </div>
+              </div>
+              <div className="pie-chart-wrapper">
+                <h4>Game</h4>
+                <div style={{ height: '200px', width: '100%' }}>
+                  <Pie data={getRatingData(gameRatings)} options={commonChartOptions} />
+                </div>
+              </div>
+              <div className="pie-chart-wrapper">
+                <h4>Sách</h4>
+                <div style={{ height: '200px', width: '100%' }}>
+                  <Pie data={getRatingData(bookRatings)} options={commonChartOptions} />
                 </div>
               </div>
             </div>
           </div>
         </div>
-      ) : (
-        <p className="no-data">😢 Chưa có dữ liệu thống kê.</p>
       )}
     </div>
   );

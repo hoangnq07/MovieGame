@@ -6,6 +6,7 @@ import { FaStar, FaHeart, FaShare } from "react-icons/fa";
 import MovieDetailsModal from "../components/MovieDetailsModal";
 import "../styles/movies.css";
 import debounce from 'lodash/debounce';
+import Recommendations from "../components/Recommendations";
 
 const GENRES = [
   { id: 28, name: "Hành Động" },

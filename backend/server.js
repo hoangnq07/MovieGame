@@ -3,6 +3,7 @@ import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import quotesRoute from './routes/quotes.js';
+import recommendationsRouter from './routes/recommendations';
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -17,6 +18,7 @@ app.use(express.json());
 
 // ✅ Route API
 app.use("/api/quotes", quotesRoute);
+app.use('/api/recommendations', recommendationsRouter);
 
 // ✅ Serve Frontend build nếu cần
 app.use(express.static(path.join(__dirname, '../frontend/dist')));

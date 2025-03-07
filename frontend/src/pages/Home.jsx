@@ -1,6 +1,7 @@
 import Weather from '../components/Weather';
 import Quotes from '../components/Quotes';
 import RandomPicker from '../components/RandomPicker';
+import Recommendations from '../components/Recommendations';
 import { useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 
@@ -16,6 +17,10 @@ const Home = () => {
   return (
     <div style={{ textAlign: 'center', marginTop: '20px' }}>
       <h1>🏠 Trang Chủ</h1>
+      
+      {/* Recommendations section */}
+      <Recommendations />
+      
       <Weather />
       <Quotes />
       <RandomPicker />

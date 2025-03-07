@@ -6,9 +6,14 @@ import "../styles/favorites.css"; // Tạo file CSS mới cho Favorites
 const Favorites = () => {
   const [favorites, setFavorites] = useState([]);
   const [animeList, setAnimeList] = useState([]); // Thêm state cho anime
+  const [gameFavorites, setGameFavorites] = useState([]); // Thêm state cho games
   const [sortBy, setSortBy] = useState("dateAdded");
   const [mangaFavorites, setMangaFavorites] = useState(() => {
     const saved = localStorage.getItem("favoriteManga");
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [bookFavorites, setBookFavorites] = useState(() => {
+    const saved = localStorage.getItem("favoriteBooks");
     return saved ? JSON.parse(saved) : [];
   });
 
@@ -21,8 +26,18 @@ const Favorites = () => {
     const savedAnime = localStorage.getItem("favoriteAnime");
     const animeFavorites = savedAnime ? JSON.parse(savedAnime) : [];
 
+    // Load game favorites
+    const savedGames = localStorage.getItem("favoriteGames");
+    const gameFavorites = savedGames ? JSON.parse(savedGames) : [];
+
+    // Load book favorites
+    const savedBooks = localStorage.getItem("favoriteBooks");
+    const bookFavorites = savedBooks ? JSON.parse(savedBooks) : [];
+
     setFavorites(movieFavorites);
     setAnimeList(animeFavorites);
+    setGameFavorites(gameFavorites);
+    setBookFavorites(bookFavorites);
   }, []);
 
   const removeFavorite = (id, type = 'movie') => {
@@ -38,6 +53,10 @@ const Favorites = () => {
       const newMangaFavorites = mangaFavorites.filter(manga => manga.id !== id);
       setMangaFavorites(newMangaFavorites);
       localStorage.setItem("favoriteManga", JSON.stringify(newMangaFavorites));
+    } else if (type === 'game') {
+      const newGameFavorites = gameFavorites.filter(game => game.id !== id);
+      setGameFavorites(newGameFavorites);
+      localStorage.setItem("favoriteGames", JSON.stringify(newGameFavorites));
     }
   };
 
@@ -63,6 +82,36 @@ const Favorites = () => {
           return new Date(b.dateAdded || 0) - new Date(a.dateAdded || 0);
         case "rating":
           return (b.score || 0) - (a.score || 0);
+        case "title":
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const getSortedGames = () => {
+    return [...gameFavorites].sort((a, b) => {
+      switch (sortBy) {
+        case "dateAdded":
+          return new Date(b.dateAdded) - new Date(a.dateAdded);
+        case "rating":
+          return b.userRating - a.userRating;
+        case "title":
+          return a.title.localeCompare(b.title);
+        default:
+          return 0;
+      }
+    });
+  };
+
+  const getSortedBooks = () => {
+    return [...bookFavorites].sort((a, b) => {
+      switch (sortBy) {
+        case "dateAdded":
+          return new Date(b.dateAdded) - new Date(a.dateAdded);
+        case "rating":
+          return b.userRating - a.userRating;
         case "title":
           return a.title.localeCompare(b.title);
         default:
@@ -150,6 +199,41 @@ const Favorites = () => {
         ))}
       </div>
 
+      <h3>Games</h3>
+      <div className="favorites-grid">
+        {getSortedGames().map(game => (
+          <div key={game.id} className="favorite-card">
+            <LazyLoadImage
+              src={game.coverUrl}
+              alt={game.title}
+              effect="blur"
+              className="favorite-poster"
+            />
+            <div className="favorite-content">
+              <h4>{game.title}</h4>
+              <div className="favorite-rating">
+                {[...Array(5)].map((_, index) => (
+                  <FaStar
+                    key={index}
+                    color={index < game.userRating ? "#FFD700" : "#ccc"}
+                    size={16}
+                  />
+                ))}
+              </div>
+              <p className="favorite-date">
+                Thêm vào: {new Date(game.dateAdded).toLocaleDateString("vi-VN")}
+              </p>
+              <button 
+                className="remove-btn"
+                onClick={() => removeFavorite(game.id, 'game')}
+              >
+                <FaTrash /> Xóa
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
       <div className="favorites-section">
         <h3>Manga</h3>
         <div className="favorites-grid">
@@ -187,7 +271,46 @@ const Favorites = () => {
         </div>
       </div>
 
-      {favorites.length === 0 && animeList.length === 0 && mangaFavorites.length === 0 && (
+      <h3>Books</h3>
+      <div className="favorites-grid">
+        {getSortedBooks().map(book => (
+          <div key={book.id} className="favorite-card">
+            <LazyLoadImage
+              src={book.coverUrl}
+              alt={book.title}
+              effect="blur"
+              className="favorite-poster"
+            />
+            <div className="favorite-content">
+              <h4>{book.title}</h4>
+              <p>{book.authors.join(', ')}</p>
+              <div className="favorite-rating">
+                {[...Array(5)].map((_, index) => (
+                  <FaStar
+                    key={index}
+                    color={index < book.userRating ? "#FFD700" : "#ccc"}
+                    size={16}
+                  />
+                ))}
+              </div>
+              <p className="favorite-date">
+                Added: {new Date(book.dateAdded).toLocaleDateString()}
+              </p>
+              <button 
+                className="remove-btn"
+                onClick={() => removeFavorite(book.id, 'book')}
+              >
+                <FaTrash /> Remove
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {favorites.length === 0 && 
+       animeList.length === 0 && 
+       mangaFavorites.length === 0 &&
+       gameFavorites.length === 0 && (
         <div className="no-favorites">
           <p>Chưa có nội dung yêu thích nào.</p>
         </div>

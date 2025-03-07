@@ -8,6 +8,11 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': 'http://localhost:5000', // 👉 Proxy API requests đến backend khi dev
-    },
-  },
+      '/api/tiki': {
+        target: 'https://tiki.vn/api/v2',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api\/tiki/, '')
+      }
+    }
+  }
 });
