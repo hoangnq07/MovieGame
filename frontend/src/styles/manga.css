@@ -1,0 +1,733 @@
+/* Container styles */
+.manga-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+/* Search bar */
+.manga-search {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto 30px;
+  position: relative;
+}
+
+.manga-search input {
+  width: 100%;
+  padding: 12px 20px;
+  padding-right: 40px; /* Thêm space cho loading indicator */
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.manga-search input:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+/* Loading indicator */
+.search-loading {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 20px;
+  height: 20px;
+  border: 2px solid #f3f3f3;
+  border-top: 2px solid #2196f3;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: translateY(-50%) rotate(0deg); }
+  100% { transform: translateY(-50%) rotate(360deg); }
+}
+
+/* Grid layout */
+.manga-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 25px;
+  padding: 20px 0;
+}
+
+/* Manga card */
+.manga-card {
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.manga-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Manga poster/cover */
+.manga-cover {
+  position: relative;
+  width: 100%;
+  padding-top: 140%; /* Aspect ratio 1.4:1 */
+}
+
+.manga-cover img {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.manga-card:hover .manga-cover img {
+  transform: scale(1.05);
+}
+
+/* Nút yêu thích trên card */
+.favorite-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(255, 255, 255, 0.9);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 2;
+  padding: 8px;
+  transition: all 0.2s ease;
+}
+
+.favorite-button:hover {
+  transform: scale(1.1);
+}
+
+.favorite-button.active {
+  color: #ff4444;
+}
+
+/* Nút yêu thích trong modal */
+.manga-modal-favorite {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+
+.manga-modal-favorite.active {
+  background: #ff4444;
+  color: white;
+  border-color: #ff4444;
+}
+
+.manga-modal-favorite:hover {
+  transform: translateX(-50%) scale(1.05);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .favorite-button {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+  }
+  
+  .favorite-button.active {
+    color: #ff4444;
+  }
+  
+  .manga-modal-favorite {
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border-color: #444;
+  }
+  
+  .manga-modal-favorite.active {
+    background: #ff4444;
+    border-color: #ff4444;
+  }
+}
+
+/* Modal styles */
+.manga-modal {
+  position: relative;
+  background: white;
+  border-radius: 8px;
+  padding: 20px;
+  max-width: 800px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+  margin: 20px auto;
+}
+
+/* Overlay cho modal */
+.ReactModal__Overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.75) !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+/* Thêm scrollbar styles cho modal */
+.manga-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.manga-modal::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.manga-modal::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 4px;
+}
+
+.manga-modal::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .manga-modal {
+    width: 95%;
+    padding: 20px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .manga-modal {
+    background: #2d2d2d;
+  }
+
+  .manga-modal::-webkit-scrollbar-track {
+    background: #1a1a1a;
+  }
+
+  .manga-modal::-webkit-scrollbar-thumb {
+    background: #666;
+  }
+
+  .manga-modal::-webkit-scrollbar-thumb:hover {
+    background: #888;
+  }
+}
+
+.manga-modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  position: relative;
+  
+}
+
+.manga-modal-title {
+  margin: 0;
+  padding-right: 40px; /* Tạo khoảng trống cho nút close */
+  color: red;
+}
+
+.manga-modal-close {
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  padding: 5px;
+  line-height: 1;
+  color: #666;
+}
+
+.manga-modal-content {
+  display: flex;
+  gap: 20px;
+}
+
+.manga-modal-cover-wrapper {
+  position: relative;
+  flex-shrink: 0;
+  width: 300px;
+}
+
+.manga-modal-cover {
+  width: 100%;
+  height: auto;
+  border-radius: 8px;
+}
+
+.manga-modal-favorite {
+  color: #333;
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid #ddd;
+  border-radius: 20px;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.manga-modal-favorite.active {
+  background: #ff4444;
+  color: white;
+  border-color: #ff4444;
+}
+
+.manga-modal-favorite:hover {
+  transform: translateX(-50%) scale(1.05);
+}
+
+.manga-modal-info {
+  flex: 1;
+}
+
+.manga-modal-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.manga-tag {
+  background: #f0f0f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.manga-description {
+  margin-top: 16px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .manga-modal-content {
+    flex-direction: column;
+  }
+
+  .manga-modal-cover-wrapper {
+    width: 100%;
+    max-width: 300px;
+    margin: 0 auto;
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .manga-modal-description h3 {
+    color: black;
+  }
+  
+  .manga-modal-description p {
+    color: black;
+  }
+}
+
+/* Load more button */
+.load-more {
+  display: block;
+  margin: 30px auto;
+  padding: 12px 24px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.load-more:hover {
+  background: #1976d2;
+  transform: translateY(-2px);
+}
+
+/* Loading state */
+.loading {
+  text-align: center;
+  padding: 20px;
+  color: #666;
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .manga-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 768px) {
+  .manga-modal-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .manga-modal-cover {
+    max-width: 300px;
+    margin: 0 auto;
+  }
+}
+
+@media (max-width: 480px) {
+  .manga-grid {
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 15px;
+  }
+  
+  .manga-content {
+    padding: 10px;
+  }
+  
+  .manga-title {
+    font-size: 0.9rem;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .manga-card {
+    background: #2d2d2d;
+  }
+
+  .manga-title {
+    color: #fff;
+  }
+
+  .manga-modal {
+    background: #2d2d2d;
+  }
+
+  .manga-modal-title {
+    color: #fff;
+  }
+
+  .manga-modal-info {
+    color: #fff;
+  }
+
+  .manga-tag {
+    background: #3d3d3d;
+    color: #fff;
+  }
+
+  .manga-modal-description {
+    color: #ccc;
+  }
+}
+
+/* Filter styles */
+.manga-filters {
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.search-input {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  background: white;
+  color: #333;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.1);
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .search-input {
+    background: #333;
+    color: #fff;
+    border-color: #444;
+  }
+
+  .search-input::placeholder {
+    color: #aaa;
+  }
+
+  .search-input:focus {
+    border-color: #2196f3;
+    background: #333; /* Giữ màu nền tối khi focus */
+  }
+}
+
+.filters-section {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.filter-select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  min-width: 150px;
+  cursor: pointer;
+}
+
+.filter-select:hover {
+  border-color: #999;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .filters-section {
+    flex-direction: column;
+  }
+
+  .filter-select {
+    width: 100%;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .manga-filters {
+    background: #2a2a2a;
+  }
+
+  .search-input,
+  .filter-select {
+    background: #333;
+    color: #fff;
+    border-color: #444;
+  }
+
+  .search-input:focus,
+  .filter-select:focus {
+    border-color: #666;
+  }
+}
+
+/* Thêm styles cho genres */
+.genres-section {
+  margin-top: 20px;
+}
+
+.genres-section h4 {
+  margin-bottom: 10px;
+  font-size: 1rem;
+  color: #666;
+}
+
+.genres-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.genre-tag {
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.genre-tag:hover {
+  background: #e0e0e0;
+}
+
+.genre-tag.active {
+  background: #2196f3;
+  color: white;
+  border-color: #1976d2;
+}
+
+.reset-filters-btn {
+  padding: 8px 16px;
+  background: #ff5722;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.reset-filters-btn:hover {
+  background: #f4511e;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .genres-section h4 {
+    color: #aaa;
+  }
+
+  .genre-tag {
+    background: #333;
+    border-color: #444;
+    color: #fff;
+  }
+
+  .genre-tag:hover {
+    background: #444;
+  }
+
+  .genre-tag.active {
+    background: #1976d2;
+    border-color: #1565c0;
+  }
+}
+
+/* Responsive design cho genres */
+@media (max-width: 768px) {
+  .genres-grid {
+    gap: 6px;
+  }
+
+  .genre-tag {
+    padding: 4px 10px;
+    font-size: 0.8rem;
+  }
+}
+
+/* Thêm styles cho search options */
+.search-section {
+  margin-bottom: 20px;
+}
+
+.search-options {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 10px;
+  align-items: center;
+}
+
+.search-mode-select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background: white;
+  min-width: 150px;
+}
+
+.exact-match-label {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 100%;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .search-mode-select {
+    background: #333;
+    color: #fff;
+    border-color: #444;
+  }
+
+  .exact-match-label {
+    color: #fff;
+  }
+}
+
+/* Cập nhật styles cho search form */
+.search-form {
+  width: 100%;
+}
+
+.search-input-wrapper {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.search-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 16px;
+  background: white;
+  color: #333;
+}
+
+.search-button {
+  padding: 10px 20px;
+  background: #2196f3;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: background 0.2s;
+}
+
+.search-button:hover {
+  background: #1976d2;
+}
+
+.loading-indicator {
+  text-align: center;
+  padding: 20px;
+  font-size: 18px;
+  color: #666;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .search-input {
+    background: #333;
+    color: #fff;
+    border-color: #444;
+  }
+
+  .search-input::placeholder {
+    color: #aaa;
+  }
+
+  .loading-indicator {
+    color: #aaa;
+  }
+}

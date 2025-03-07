@@ -8,11 +8,11 @@ import Games from "./pages/Games";
 import Settings from "./pages/Settings";
 import Anime from "./pages/Anime";
 import Favorites from "./pages/Favorites";
-import AnimeStats from "./pages/AnimeStats";
 import ErrorBoundary from "./components/ErrorBoundary";
 import NotFound from "./pages/NotFound";
 
 import "./index.css";
+import Stats from "./pages/Stats";
 
 const App = () => {
   return (
@@ -38,7 +38,7 @@ const App = () => {
           
           } />
           <Route path="/favorites" element={<Favorites />}/>
-          <Route path="/stats" element={<AnimeStats />} />
+          <Route path="/stats" element={<Stats />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>
   

@@ -29,62 +29,47 @@ const GENRES = [
   { id: 37, name: "Cao Bồi" }
 ];
 
-// Định nghĩa StarRating component
-const StarRating = ({ rating, onRate }) => (
-  <div className="star-rating">
-    {[...Array(5)].map((_, index) => (
-      <FaStar
-        key={index}
-        size={20}
-        color={index + 1 <= rating ? "#FFD700" : "#ccc"}
-        style={{ cursor: "pointer" }}
-        onClick={() => onRate(index + 1)}
-      />
-    ))}
-  </div>
-);
-
-// Hàm để lấy tên thể loại từ danh sách ID
-const getGenreNames = (genreIds, genres) => {
-  if (!genreIds || !Array.isArray(genreIds)) return [];
-  return genreIds
-    .map(id => genres[id])
-    .filter(name => name)
-    .slice(0, 3); // Giới hạn 3 thể loại
-};
-
 // MovieCard component
-const MovieCard = ({ movie, onShowDetails, onToggleFavorite, onShare, rating, onRate, isFavorite }) => (
+const MovieCard = ({ movie, onShowDetails, onToggleFavorite, onRate, rating, isFavorite }) => (
   <div className="movie-card">
-    {movie?.poster_path && (
-      <LazyLoadImage
-        src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
-        alt={movie.title}
-        effect="blur"
-        className="movie-poster"
-        onClick={() => onShowDetails(movie)}
-      />
-    )}
+    <LazyLoadImage
+      src={`https://image.tmdb.org/t/p/w500${movie.poster_path}`}
+      alt={movie.title}
+      effect="blur"
+      className="movie-poster"
+      onClick={() => onShowDetails(movie)}
+    />
     <div className="movie-content">
       <h4 className="movie-title">{movie.title}</h4>
-      {movie.release_date && (
-        <p className="movie-release-date">
-          {new Date(movie.release_date).toLocaleDateString("vi-VN")}
-        </p>
-      )}
+      <p className="movie-release-date">
+        {movie.release_date && new Date(movie.release_date).getFullYear()}
+      </p>
       
       <div className="movie-actions">
-        <StarRating rating={rating} onRate={onRate} />
-        <div className="action-buttons">
-          <FaHeart
-            className={`favorite-icon ${isFavorite ? 'active' : ''}`}
-            onClick={() => onToggleFavorite(movie)}
-          />
-          <FaShare
-            className="share-icon"
-            onClick={() => onShare(movie)}
-          />
+        <div className="star-rating">
+          {[...Array(5)].map((_, index) => (
+            <FaStar
+              key={index}
+              size={20}
+              color={index + 1 <= rating ? "#FFD700" : "#ccc"}
+              style={{ cursor: "pointer" }}
+              onClick={(e) => {
+                e.stopPropagation();
+                onRate(index + 1);
+              }}
+            />
+          ))}
         </div>
+        
+        <button 
+          className={`favorite-btn ${isFavorite ? 'active' : ''}`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleFavorite(movie); // Truyền movie object vào hàm
+          }}
+        >
+          <FaHeart color={isFavorite ? "#ff4444" : "#666"} />
+        </button>
       </div>
 
       <div className="movie-rating">
@@ -129,12 +114,25 @@ const Movies = () => {
   const [selectedGenre, setSelectedGenre] = useState("");
 
   // Local Storage Management
-  const [favorites, setFavorites] = useState(() => 
-    JSON.parse(localStorage.getItem("favoriteMovies") || "[]")
-  );
-  const [ratings, setRatings] = useState(() => 
-    JSON.parse(localStorage.getItem("movieRatings") || "{}")
-  );
+  const [favorites, setFavorites] = useState(() => {
+    try {
+      const saved = localStorage.getItem("favoriteMovies");
+      return saved ? JSON.parse(saved) : [];
+    } catch (error) {
+      console.error("Error loading favorites:", error);
+      return [];
+    }
+  });
+  
+  const [ratings, setRatings] = useState(() => {
+    try {
+      const saved = localStorage.getItem("movieRatings");
+      return saved ? JSON.parse(saved) : {};
+    } catch (error) {
+      console.error("Error loading ratings:", error);
+      return {};
+    }
+  });
 
   // API Calls
   const fetchMovies = useCallback(async (pageNum) => {
@@ -278,20 +276,42 @@ const Movies = () => {
     }
   };
 
-  const handleRating = (movieId, rating) => {
-    const updatedRatings = { ...ratings, [movieId]: rating };
-    setRatings(updatedRatings);
-    localStorage.setItem("movieRatings", JSON.stringify(updatedRatings));
+  const handleRating = (movie, rating) => {
+    if (!movie || !movie.id) return; // Thêm kiểm tra để tránh lỗi
+
+    const newRatings = { ...ratings, [movie.id]: rating };
+    setRatings(newRatings);
+    localStorage.setItem("movieRatings", JSON.stringify(newRatings));
   };
 
-  const toggleFavorite = (movie) => {
-    const isFavorite = favorites.some(fav => fav.id === movie.id);
-    const updatedFavorites = isFavorite
-      ? favorites.filter(fav => fav.id !== movie.id)
-      : [...favorites, movie];
-    
-    setFavorites(updatedFavorites);
-    localStorage.setItem("favoriteMovies", JSON.stringify(updatedFavorites));
+  const handleToggleFavorite = (movie) => {
+    if (!movie || !movie.id) return;
+
+    setFavorites(prev => {
+      // Kiểm tra xem phim đã có trong danh sách yêu thích chưa
+      const existingFavorite = prev.find(f => f.id === movie.id);
+      
+      if (existingFavorite) {
+        // Nếu đã có thì xóa khỏi danh sách
+        const newFavorites = prev.filter(f => f.id !== movie.id);
+        localStorage.setItem("favoriteMovies", JSON.stringify(newFavorites));
+        return newFavorites;
+      } else {
+        // Nếu chưa có thì thêm vào danh sách
+        const movieToAdd = {
+          id: movie.id,
+          title: movie.title,
+          poster_path: movie.poster_path,
+          release_date: movie.release_date,
+          vote_average: movie.vote_average,
+          dateAdded: new Date().toISOString(),
+          userRating: ratings[movie.id] || 0
+        };
+        const newFavorites = [...prev, movieToAdd];
+        localStorage.setItem("favoriteMovies", JSON.stringify(newFavorites));
+        return newFavorites;
+      }
+    });
   };
 
   const shareMovie = async (movie) => {
@@ -458,6 +478,11 @@ const Movies = () => {
     loadMoreMovies(); // Tải lại danh sách phim với filters mới
   }, [sortBy, filterGenre, filterYear]);
 
+  // Sửa lại hàm kiểm tra isFavorite
+  const isFavorite = (movieId) => {
+    return movieId ? favorites.some(f => f.id === movieId) : false;
+  };
+
   return (
     <div className="movies-container">
       {loading && <div className="loading">Đang tải...</div>}
@@ -544,17 +569,15 @@ const Movies = () => {
         endMessage={<div className="end-message">Đã tải hết phim! ���</div>}
       >
         <div className="movies-grid">
-          {filteredMovies.map((movie, index) => (
+          {filteredMovies.map((movie) => (
             <MovieCard
-              key={`${movie.id}-${index}`}
+              key={movie.id}
               movie={movie}
               onShowDetails={setSelectedMovie}
-              onToggleFavorite={toggleFavorite}
-              onShare={shareMovie}
+              onToggleFavorite={() => handleToggleFavorite(movie)}
+              onRate={(rating) => handleRating(movie, rating)}
               rating={ratings[movie.id] || 0}
-              onRate={(rating) => handleRating(movie.id, rating)}
-              isFavorite={favorites.some(fav => fav.id === movie.id)}
-              genres={genres}
+              isFavorite={isFavorite(movie.id)}
             />
           ))}
         </div>
