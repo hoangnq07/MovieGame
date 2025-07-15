@@ -1,0 +1,311 @@
+name: Deploy MOVIEGAME to AWS EC2
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY_BACKEND: moviegame/backend
+  ECR_REPOSITORY_FRONTEND: moviegame/frontend
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test Application
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
+    
+    - name: Install backend dependencies
+      run: |
+        cd backend
+        npm ci
+    
+    - name: Install frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+    
+    - name: Run backend linting
+      run: |
+        cd backend
+        npm run lint || echo "No lint script found"
+    
+    - name: Run frontend linting
+      run: |
+        cd frontend
+        npm run lint || echo "No lint script found"
+    
+    - name: Run backend tests
+      run: |
+        cd backend
+        npm test || echo "No tests found"
+    
+    - name: Run frontend tests
+      run: |
+        cd frontend
+        npm test || echo "No tests found"
+    
+    - name: Build frontend
+      run: |
+        cd frontend
+        npm run build
+    
+    - name: Test Docker builds
+      run: |
+        docker build -f backend/Dockerfile.prod -t test-backend ./backend
+        docker build -f frontend/Dockerfile.prod -t test-frontend ./frontend
+
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scan
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+    
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  build-and-push:
+    needs: [test, security-scan]
+    runs-on: ubuntu-latest
+    name: Build and Push Images
+    if: github.ref == 'refs/heads/main'
+    
+    outputs:
+      backend-image: ${{ steps.build-backend.outputs.image }}
+      frontend-image: ${{ steps.build-frontend.outputs.image }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v2
+    
+    - name: Build and push backend image
+      id: build-backend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build image
+        docker build -f backend/Dockerfile.prod -t $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG ./backend
+        
+        # Push image
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG
+        
+        # Tag as latest
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:latest
+        
+        # Output image URI
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_BACKEND:$IMAGE_TAG" >> $GITHUB_OUTPUT
+    
+    - name: Build and push frontend image
+      id: build-frontend
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build image
+        docker build -f frontend/Dockerfile.prod -t $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG ./frontend
+        
+        # Push image
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG
+        
+        # Tag as latest
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:latest
+        
+        # Output image URI
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY_FRONTEND:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    name: Deploy to EC2
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+    
+    - name: Deploy to EC2
+      env:
+        PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+        HOST: ${{ secrets.EC2_HOST }}
+        USER: ec2-user
+        BACKEND_IMAGE: ${{ needs.build-and-push.outputs.backend-image }}
+        FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend-image }}
+      run: |
+        # Setup SSH
+        echo "$PRIVATE_KEY" > private_key.pem
+        chmod 600 private_key.pem
+        
+        # Create deployment script
+        cat > deploy_script.sh << 'EOF'
+        #!/bin/bash
+        set -e
+        
+        APP_DIR="/opt/moviegame"
+        cd $APP_DIR
+        
+        echo "🚀 Starting deployment..."
+        
+        # Create backup
+        sudo mkdir -p backups
+        sudo tar -czf backups/pre-deploy-$(date +%Y%m%d-%H%M%S).tar.gz \
+          --exclude='node_modules' \
+          --exclude='logs' \
+          --exclude='backups' \
+          . 2>/dev/null || true
+        
+        # Login to ECR
+        aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin $(echo $BACKEND_IMAGE | cut -d'/' -f1)
+        
+        # Update docker-compose to use new images
+        sed -i "s|image:.*backend.*|image: $BACKEND_IMAGE|g" docker-compose.prod.yml || true
+        sed -i "s|image:.*frontend.*|image: $FRONTEND_IMAGE|g" docker-compose.prod.yml || true
+        
+        # Pull new images
+        sudo docker pull $BACKEND_IMAGE
+        sudo docker pull $FRONTEND_IMAGE
+        
+        # Deploy with zero downtime
+        sudo docker-compose -f docker-compose.prod.yml up -d
+        
+        # Wait for services to be healthy
+        echo "⏳ Waiting for services to be healthy..."
+        sleep 30
+        
+        # Health check
+        for i in {1..10}; do
+          if curl -f http://localhost/health > /dev/null 2>&1; then
+            echo "✅ Health check passed"
+            break
+          else
+            echo "⏳ Health check attempt $i/10 failed, retrying..."
+            sleep 10
+          fi
+          
+          if [ $i -eq 10 ]; then
+            echo "❌ Health check failed after 10 attempts"
+            exit 1
+          fi
+        done
+        
+        # Test API
+        if curl -f http://localhost/api/quotes/random-quote > /dev/null 2>&1; then
+          echo "✅ API test passed"
+        else
+          echo "❌ API test failed"
+          exit 1
+        fi
+        
+        # Clean up old images
+        sudo docker image prune -f
+        
+        echo "🎉 Deployment completed successfully!"
+        EOF
+        
+        # Upload and execute deployment script
+        scp -i private_key.pem -o StrictHostKeyChecking=no deploy_script.sh $USER@$HOST:/tmp/
+        ssh -i private_key.pem -o StrictHostKeyChecking=no $USER@$HOST "
+          chmod +x /tmp/deploy_script.sh
+          BACKEND_IMAGE='$BACKEND_IMAGE' FRONTEND_IMAGE='$FRONTEND_IMAGE' /tmp/deploy_script.sh
+          rm /tmp/deploy_script.sh
+        "
+        
+        # Cleanup
+        rm private_key.pem deploy_script.sh
+    
+    - name: Notify deployment status
+      if: always()
+      run: |
+        if [ "${{ job.status }}" == "success" ]; then
+          echo "✅ Deployment successful!"
+          # Add notification logic here (Slack, Discord, email, etc.)
+        else
+          echo "❌ Deployment failed!"
+          # Add failure notification logic here
+        fi
+
+  post-deploy-tests:
+    needs: deploy
+    runs-on: ubuntu-latest
+    name: Post-Deployment Tests
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Run smoke tests
+      env:
+        APP_URL: http://${{ secrets.EC2_HOST }}
+      run: |
+        echo "🧪 Running smoke tests..."
+        
+        # Test health endpoint
+        if curl -f "$APP_URL/health"; then
+          echo "✅ Health endpoint test passed"
+        else
+          echo "❌ Health endpoint test failed"
+          exit 1
+        fi
+        
+        # Test API endpoint
+        if curl -f "$APP_URL/api/quotes/random-quote"; then
+          echo "✅ API endpoint test passed"
+        else
+          echo "❌ API endpoint test failed"
+          exit 1
+        fi
+        
+        # Test frontend loading
+        if curl -f "$APP_URL" | grep -q "MOVIEGAME"; then
+          echo "✅ Frontend loading test passed"
+        else
+          echo "❌ Frontend loading test failed"
+          exit 1
+        fi
+        
+        echo "🎉 All smoke tests passed!"

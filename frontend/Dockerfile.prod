@@ -1,0 +1,91 @@
+# syntax=docker/dockerfile:1
+
+# Build stage
+FROM node:18-alpine AS builder
+
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache git
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies
+RUN npm ci --frozen-lockfile && \
+    npm audit fix --audit-level moderate || true
+
+# Copy source code
+COPY . .
+
+# Build application with production optimizations
+ENV NODE_ENV=production
+RUN npm run build && \
+    # Remove source maps in production for security
+    find dist -name "*.map" -delete
+
+# Production stage
+FROM nginx:1.25-alpine AS production
+
+# Install security updates
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+        wget \
+        curl && \
+    rm -rf /var/cache/apk/*
+
+# Create nginx user and directories
+RUN addgroup -g 1001 -S nginx && \
+    adduser -S nginx -u 1001 -G nginx && \
+    mkdir -p /var/cache/nginx/client_temp && \
+    mkdir -p /var/cache/nginx/proxy_temp && \
+    mkdir -p /var/cache/nginx/fastcgi_temp && \
+    mkdir -p /var/cache/nginx/uwsgi_temp && \
+    mkdir -p /var/cache/nginx/scgi_temp
+
+# Copy built application
+COPY --from=builder --chown=nginx:nginx /app/dist /usr/share/nginx/html
+
+# Copy optimized nginx configuration
+COPY --chown=nginx:nginx nginx.prod.conf /etc/nginx/nginx.conf
+
+# Create health check endpoint
+RUN echo 'healthy' > /usr/share/nginx/html/health
+
+# Set proper permissions
+RUN chown -R nginx:nginx /usr/share/nginx/html && \
+    chown -R nginx:nginx /var/cache/nginx && \
+    chown -R nginx:nginx /var/log/nginx && \
+    chown -R nginx:nginx /etc/nginx/conf.d && \
+    # Make nginx.conf readable
+    chmod 644 /etc/nginx/nginx.conf && \
+    # Create PID directory
+    mkdir -p /var/run && \
+    chown nginx:nginx /var/run
+
+# Add security headers script
+RUN echo '#!/bin/sh\nwget --no-verbose --tries=1 --spider http://localhost/health || exit 1' > /usr/local/bin/healthcheck && \
+    chmod +x /usr/local/bin/healthcheck
+
+# Remove default nginx config
+RUN rm -f /etc/nginx/conf.d/default.conf
+
+# Switch to non-root user
+USER nginx
+
+# Expose ports
+EXPOSE 80 443
+
+# Add labels
+LABEL maintainer="MOVIEGAME Team" \
+      version="1.0" \
+      description="MOVIEGAME Frontend" \
+      org.opencontainers.image.source="https://github.com/yourusername/moviegame"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=20s --retries=3 \
+    CMD /usr/local/bin/healthcheck
+
+# Start nginx
+CMD ["nginx", "-g", "daemon off;"]

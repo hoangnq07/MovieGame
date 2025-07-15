@@ -1,0 +1,82 @@
+# syntax=docker/dockerfile:1
+
+# Base stage with security updates
+FROM node:18-alpine AS base
+
+# Install security updates and required packages
+RUN apk update && \
+    apk upgrade && \
+    apk add --no-cache \
+        dumb-init \
+        wget \
+        curl && \
+    rm -rf /var/cache/apk/*
+
+# Create app directory
+WORKDIR /app
+
+# Create non-root user early
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001 -G nodejs
+
+# Dependencies stage
+FROM base AS deps
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies with security audit
+RUN npm ci --only=production --audit && \
+    npm cache clean --force && \
+    npm audit fix --audit-level moderate || true
+
+# Production stage
+FROM base AS production
+
+# Copy dependencies from deps stage
+COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+
+# Copy application code
+COPY --chown=nodejs:nodejs . .
+
+# Remove development files and sensitive data
+RUN rm -rf \
+    .git \
+    .gitignore \
+    README.md \
+    Dockerfile* \
+    docker-compose* \
+    .env* \
+    *.md \
+    tests/ \
+    coverage/ \
+    .nyc_output/ && \
+    # Create necessary directories
+    mkdir -p logs && \
+    chown -R nodejs:nodejs logs
+
+# Add health check script
+RUN echo '#!/bin/sh\nwget --no-verbose --tries=1 --spider http://localhost:5000/health || exit 1' > /usr/local/bin/healthcheck && \
+    chmod +x /usr/local/bin/healthcheck
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 5000
+
+# Add labels for better container management
+LABEL maintainer="MOVIEGAME Team" \
+      version="1.0" \
+      description="MOVIEGAME Backend API" \
+      org.opencontainers.image.source="https://github.com/yourusername/moviegame"
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD /usr/local/bin/healthcheck
+
+# Use dumb-init for proper signal handling
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the application
+CMD ["npm", "start"]
